@@ -1,0 +1,99 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Club {
+  id            String    @id @default(cuid())
+  nome          String
+  cidade        String
+  estado        String
+  logoUrl       String?
+  planoCodigo   String    @default("gratuito")
+  planoExpiraEm DateTime?
+  criadoEm      DateTime  @default(now())
+  coaches       Coach[]
+  teams         Team[]
+}
+
+model Coach {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  nome      String
+  clubId    String
+  club      Club     @relation(fields: [clubId], references: [id])
+  role      String   @default("head") // head | assistant
+  criadoEm DateTime  @default(now())
+  matches  Match[]
+}
+
+model Team {
+  id             String   @id @default(cuid())
+  nome           String
+  categoriaIdade String   // sub-17, sub-19, adulto, etc.
+  genero         String   // masculino | feminino | misto
+  clubId         String
+  club           Club     @relation(fields: [clubId], references: [id])
+  players        Player[]
+  homeMatches    Match[]  @relation("HomeTeam")
+  awayMatches    Match[]  @relation("AwayTeam")
+}
+
+model Player {
+  id           String   @id @default(cuid())
+  nome         String
+  numeroJersey Int
+  posicao      String   // ponteiro, oposto, central, levantador, libero, universal
+  teamId       String
+  team         Team     @relation(fields: [teamId], references: [id])
+  fotoUrl      String?
+  criadoEm     DateTime @default(now())
+}
+
+model Match {
+  id          String         @id @default(cuid())
+  data        DateTime
+  competicao  String?
+  local       String?
+  homeTeamId  String
+  homeTeam    Team           @relation("HomeTeam", fields: [homeTeamId], references: [id])
+  awayTeamId  String
+  awayTeam    Team           @relation("AwayTeam", fields: [awayTeamId], references: [id])
+  coachId     String
+  coach       Coach          @relation(fields: [coachId], references: [id])
+  videoUrl    String?
+  videoStatus String         @default("pendente") // pendente | enviando | processando | concluido | erro
+  criadoEm   DateTime       @default(now())
+  analysis    MatchAnalysis?
+  reports     Report[]
+}
+
+model MatchAnalysis {
+  id              String    @id @default(cuid())
+  matchId         String    @unique
+  match           Match     @relation(fields: [matchId], references: [id])
+  status          String    @default("na_fila") // na_fila | processando | concluido | erro
+  cvOutputJson    Json?
+  confiancaMedia  Float?
+  duracaoSegundos Int?
+  totalEventos    Int?
+  erroMensagem    String?
+  iniciadoEm      DateTime?
+  concluidoEm     DateTime?
+  criadoEm        DateTime  @default(now())
+}
+
+model Report {
+  id            String   @id @default(cuid())
+  matchId       String
+  match         Match    @relation(fields: [matchId], references: [id])
+  tipo          String   @default("completo") // completo | resumo | jogador
+  pdfUrl        String?
+  shareToken    String   @unique @default(cuid())
+  visualizacoes Int      @default(0)
+  criadoEm      DateTime @default(now())
+}
