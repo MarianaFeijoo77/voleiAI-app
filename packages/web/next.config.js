@@ -1,13 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  async rewrites() {
-    return [
-      {
-        source: '/api/:path*',
-        destination: `${process.env.API_URL || 'http://localhost:3001'}/api/:path*`,
-      },
-    ]
-  },
+  // API routes are now Next.js API routes (no external backend needed for MVP)
+  // When real backend is ready, re-enable rewrites and set API_URL env var
 }
 
 module.exports = nextConfig
