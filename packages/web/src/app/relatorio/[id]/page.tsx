@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { buscarMatch, type Match, type TipoAcao } from '@/lib/store'
+import ClipPreview from '@/components/ClipPreview'
 
 const ICONES: Record<TipoAcao, string> = {
   saque: '🏐',
@@ -202,6 +203,13 @@ export default function Relatorio() {
                     {/* 3-layer analysis — only show if there are errors */}
                     {acao.erros > 0 && (
                       <div className="mt-3 space-y-2">
+                        <ClipPreview
+                          tipo={acao.tipo}
+                          timestamp={acao.clipTimestamp}
+                          descricao={acao.clipDescricao}
+                          isDemo={match.isDemo}
+                          nomejogador={jogador.nome}
+                        />
                         <div className="bg-red-50 rounded-lg p-3">
                           <p className="text-xs font-bold text-red-600 uppercase tracking-wide mb-1">🔍 Por que está errando</p>
                           <p className="text-xs text-gray-700 leading-relaxed">{acao.causaErros}</p>

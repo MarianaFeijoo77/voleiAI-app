@@ -15,6 +15,8 @@ export interface AcaoStats {
   causaErros: string   // WHY the mistakes are happening (root cause)
   correcao: string     // HOW to fix the execution of the movement
   exercicio: string    // specific drill to practise the correction
+  clipTimestamp: string  // timestamp in the match video where a key error occurred
+  clipDescricao: string  // short description of what the clip shows
 }
 
 export interface JogadorRelatorio {
@@ -250,7 +252,28 @@ function analiseAleatoria(tipo: TipoAcao): AnaliseAcao {
   return lista[Math.floor(Math.random() * lista.length)]
 }
 
-function gerarAcaoStats(tipo: TipoAcao, tentativas: number): AcaoStats {
+const CLIP_DESCRICOES: Record<TipoAcao, string[]> = {
+  saque:        ['Lançamento lateral — desvio na trajetória', 'Pé de apoio mal posicionado no saque', 'Sem follow-through no saque flutuante'],
+  passe:        ['Centro de gravidade alto no contato', 'Plataforma acima da linha do peito', 'Chegada atrasada ao ponto de contato'],
+  levantamento: ['Ombros entregam o destino do levantamento', 'Rotação irregular da bola no levantamento', 'Levantamento em suspensão com salto precoce'],
+  ataque:       ['Passada curta — perda de impulsão vertical', 'Cotovelo aponta zona de ataque antes do contato', 'Contato atrás do ombro no diagonal'],
+  bloqueio:     ['Salto adiantado — bloqueador desce quando a bola chega', 'Mãos tocam a rede na queda do bloqueio', 'Passo lateral insuficiente antes do salto'],
+  defesa:       ['Reação após contato — leitura tardia do atacante', 'Posição base com joelhos estendidos', 'Posicionamento incorreto para bola cortada'],
+}
+
+function clipAleatorio(tipo: TipoAcao, duracaoMin: number): { clipTimestamp: string; clipDescricao: string } {
+  const totalSec = duracaoMin * 60
+  const sec = Math.floor(Math.random() * totalSec)
+  const mm = String(Math.floor(sec / 60)).padStart(2, '0')
+  const ss = String(sec % 60).padStart(2, '0')
+  const descricoes = CLIP_DESCRICOES[tipo]
+  return {
+    clipTimestamp: `${mm}:${ss}`,
+    clipDescricao: descricoes[Math.floor(Math.random() * descricoes.length)],
+  }
+}
+
+function gerarAcaoStats(tipo: TipoAcao, tentativas: number, duracaoMin = 60): AcaoStats {
   const sucessos = Math.floor(tentativas * (0.5 + Math.random() * 0.45))
   const erros = tentativas - sucessos
   const analise = analiseAleatoria(tipo)
@@ -261,18 +284,21 @@ function gerarAcaoStats(tipo: TipoAcao, tentativas: number): AcaoStats {
     erros,
     eficiencia: Math.round((sucessos / tentativas) * 100),
     ...analise,
+    ...clipAleatorio(tipo, duracaoMin),
   }
 }
 
 const A = ANALISES // shorthand
 
+function ts(mm: string, ss: string) { return `${mm}:${ss}` }
+
 const JOGADORES_DEMO: JogadorRelatorio[] = [
   {
     nome: 'Ana Lima', posicao: 'Levantadora', numero: 1,
     acoes: [
-      { tipo: 'levantamento', tentativas: 42, sucessos: 36, erros: 6, eficiencia: 86, ...A.levantamento[0] },
-      { tipo: 'saque', tentativas: 18, sucessos: 14, erros: 4, eficiencia: 78, ...A.saque[1] },
-      { tipo: 'passe', tentativas: 12, sucessos: 8, erros: 4, eficiencia: 67, ...A.passe[2] },
+      { tipo: 'levantamento', tentativas: 42, sucessos: 36, erros: 6, eficiencia: 86, ...A.levantamento[0], clipTimestamp: ts('08','14'), clipDescricao: CLIP_DESCRICOES.levantamento[0] },
+      { tipo: 'saque', tentativas: 18, sucessos: 14, erros: 4, eficiencia: 78, ...A.saque[1], clipTimestamp: ts('23','47'), clipDescricao: CLIP_DESCRICOES.saque[1] },
+      { tipo: 'passe', tentativas: 12, sucessos: 8, erros: 4, eficiencia: 67, ...A.passe[2], clipTimestamp: ts('41','02'), clipDescricao: CLIP_DESCRICOES.passe[2] },
     ],
     pontoForte: 'levantamento', pontoMelhoria: 'passe',
     destaque: 'Levantamento consistente — variação de zona pode surpreender mais o bloqueio adversário',
@@ -280,9 +306,9 @@ const JOGADORES_DEMO: JogadorRelatorio[] = [
   {
     nome: 'Carol Santos', posicao: 'Oposta', numero: 7,
     acoes: [
-      { tipo: 'ataque', tentativas: 28, sucessos: 19, erros: 9, eficiencia: 68, ...A.ataque[1] },
-      { tipo: 'saque', tentativas: 20, sucessos: 17, erros: 3, eficiencia: 85, ...A.saque[0] },
-      { tipo: 'bloqueio', tentativas: 14, sucessos: 8, erros: 6, eficiencia: 57, ...A.bloqueio[0] },
+      { tipo: 'ataque', tentativas: 28, sucessos: 19, erros: 9, eficiencia: 68, ...A.ataque[1], clipTimestamp: ts('14','33'), clipDescricao: CLIP_DESCRICOES.ataque[1] },
+      { tipo: 'saque', tentativas: 20, sucessos: 17, erros: 3, eficiencia: 85, ...A.saque[0], clipTimestamp: ts('31','58'), clipDescricao: CLIP_DESCRICOES.saque[0] },
+      { tipo: 'bloqueio', tentativas: 14, sucessos: 8, erros: 6, eficiencia: 57, ...A.bloqueio[0], clipTimestamp: ts('47','21'), clipDescricao: CLIP_DESCRICOES.bloqueio[0] },
     ],
     pontoForte: 'saque', pontoMelhoria: 'bloqueio',
     destaque: 'Saque mais eficiente do time — variar zonas de ataque vai aumentar pontuação',
@@ -290,9 +316,9 @@ const JOGADORES_DEMO: JogadorRelatorio[] = [
   {
     nome: 'Beatriz Rocha', posicao: 'Ponteira', numero: 10,
     acoes: [
-      { tipo: 'ataque', tentativas: 22, sucessos: 14, erros: 8, eficiencia: 64, ...A.ataque[0] },
-      { tipo: 'passe', tentativas: 24, sucessos: 18, erros: 6, eficiencia: 75, ...A.passe[0] },
-      { tipo: 'defesa', tentativas: 16, sucessos: 10, erros: 6, eficiencia: 63, ...A.defesa[0] },
+      { tipo: 'ataque', tentativas: 22, sucessos: 14, erros: 8, eficiencia: 64, ...A.ataque[0], clipTimestamp: ts('11','05'), clipDescricao: CLIP_DESCRICOES.ataque[0] },
+      { tipo: 'passe', tentativas: 24, sucessos: 18, erros: 6, eficiencia: 75, ...A.passe[0], clipTimestamp: ts('28','44'), clipDescricao: CLIP_DESCRICOES.passe[0] },
+      { tipo: 'defesa', tentativas: 16, sucessos: 10, erros: 6, eficiencia: 63, ...A.defesa[0], clipTimestamp: ts('53','17'), clipDescricao: CLIP_DESCRICOES.defesa[0] },
     ],
     pontoForte: 'passe', pontoMelhoria: 'ataque',
     destaque: 'Boa recepção — impulsão de ataque abaixo do potencial, prioridade de treino',
@@ -300,9 +326,9 @@ const JOGADORES_DEMO: JogadorRelatorio[] = [
   {
     nome: 'Fernanda Melo', posicao: 'Ponteira', numero: 4,
     acoes: [
-      { tipo: 'ataque', tentativas: 19, sucessos: 14, erros: 5, eficiencia: 74, ...A.ataque[2] },
-      { tipo: 'passe', tentativas: 20, sucessos: 16, erros: 4, eficiencia: 80, ...A.passe[1] },
-      { tipo: 'defesa', tentativas: 18, sucessos: 13, erros: 5, eficiencia: 72, ...A.defesa[2] },
+      { tipo: 'ataque', tentativas: 19, sucessos: 14, erros: 5, eficiencia: 74, ...A.ataque[2], clipTimestamp: ts('17','39'), clipDescricao: CLIP_DESCRICOES.ataque[2] },
+      { tipo: 'passe', tentativas: 20, sucessos: 16, erros: 4, eficiencia: 80, ...A.passe[1], clipTimestamp: ts('35','11'), clipDescricao: CLIP_DESCRICOES.passe[1] },
+      { tipo: 'defesa', tentativas: 18, sucessos: 13, erros: 5, eficiencia: 72, ...A.defesa[2], clipTimestamp: ts('58','03'), clipDescricao: CLIP_DESCRICOES.defesa[2] },
     ],
     pontoForte: 'passe', pontoMelhoria: 'defesa',
     destaque: 'Ataque diagonal precisa melhorar — atualmente zona de maior erro',
@@ -310,9 +336,9 @@ const JOGADORES_DEMO: JogadorRelatorio[] = [
   {
     nome: 'Juliana Costa', posicao: 'Central', numero: 3,
     acoes: [
-      { tipo: 'bloqueio', tentativas: 20, sucessos: 15, erros: 5, eficiencia: 75, ...A.bloqueio[2] },
-      { tipo: 'ataque', tentativas: 14, sucessos: 10, erros: 4, eficiencia: 71, ...A.ataque[2] },
-      { tipo: 'defesa', tentativas: 10, sucessos: 6, erros: 4, eficiencia: 60, ...A.defesa[1] },
+      { tipo: 'bloqueio', tentativas: 20, sucessos: 15, erros: 5, eficiencia: 75, ...A.bloqueio[2], clipTimestamp: ts('09','52'), clipDescricao: CLIP_DESCRICOES.bloqueio[2] },
+      { tipo: 'ataque', tentativas: 14, sucessos: 10, erros: 4, eficiencia: 71, ...A.ataque[2], clipTimestamp: ts('26','18'), clipDescricao: CLIP_DESCRICOES.ataque[2] },
+      { tipo: 'defesa', tentativas: 10, sucessos: 6, erros: 4, eficiencia: 60, ...A.defesa[1], clipTimestamp: ts('44','37'), clipDescricao: CLIP_DESCRICOES.defesa[1] },
     ],
     pontoForte: 'bloqueio', pontoMelhoria: 'defesa',
     destaque: 'Melhor bloqueadora do time — timing de salto pode ser refinado',
@@ -320,9 +346,9 @@ const JOGADORES_DEMO: JogadorRelatorio[] = [
   {
     nome: 'Patrícia Alves', posicao: 'Central', numero: 6,
     acoes: [
-      { tipo: 'bloqueio', tentativas: 18, sucessos: 10, erros: 8, eficiencia: 56, ...A.bloqueio[1] },
-      { tipo: 'ataque', tentativas: 12, sucessos: 8, erros: 4, eficiencia: 67, ...A.ataque[0] },
-      { tipo: 'passe', tentativas: 8, sucessos: 5, erros: 3, eficiencia: 63, ...A.passe[2] },
+      { tipo: 'bloqueio', tentativas: 18, sucessos: 10, erros: 8, eficiencia: 56, ...A.bloqueio[1], clipTimestamp: ts('19','44'), clipDescricao: CLIP_DESCRICOES.bloqueio[1] },
+      { tipo: 'ataque', tentativas: 12, sucessos: 8, erros: 4, eficiencia: 67, ...A.ataque[0], clipTimestamp: ts('37','29'), clipDescricao: CLIP_DESCRICOES.ataque[0] },
+      { tipo: 'passe', tentativas: 8, sucessos: 5, erros: 3, eficiencia: 63, ...A.passe[2], clipTimestamp: ts('55','48'), clipDescricao: CLIP_DESCRICOES.passe[2] },
     ],
     pontoForte: 'ataque', pontoMelhoria: 'bloqueio',
     destaque: 'Toques na rede no bloqueio comprometem o resultado — foco prioritário',
