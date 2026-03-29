@@ -1,4 +1,3 @@
 {
-  "framework": "nextjs",
-  "rootDirectory": "packages/web"
+  "framework": "nextjs"
 }
