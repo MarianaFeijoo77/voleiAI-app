@@ -1,34 +1,30 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { buscarMatch, simularProcessamento, type Match } from '@/lib/store'
 
 export default function AnaliseEmAndamento({ params }: { params: { id: string } }) {
-  const [match, setMatch] = useState<any>(null)
+  const [match, setMatch] = useState<Match | null>(null)
   const [erro, setErro] = useState('')
   const router = useRouter()
 
   useEffect(() => {
-    const poll = async () => {
-      try {
-        const res = await fetch(`/api/matches/${params.id}`)
-        if (!res.ok) {
-          setErro('Partida não encontrada.')
-          return
-        }
-        const data = await res.json()
-        setMatch(data.match)
+    const m = buscarMatch(params.id)
+    if (!m) { setErro('Partida não encontrada.'); return }
+    setMatch(m)
 
-        if (data.match.status === 'concluido') {
-          router.push(`/relatorio/${params.id}`)
-        }
-      } catch {
-        setErro('Erro ao verificar status.')
-      }
+    if (m.status === 'concluido') {
+      router.push(`/relatorio/${params.id}`)
+      return
     }
 
-    poll()
-    const interval = setInterval(poll, 2000)
-    return () => clearInterval(interval)
+    const stop = simularProcessamento(params.id, (updated) => {
+      setMatch(updated)
+      if (updated.status === 'concluido') {
+        setTimeout(() => router.push(`/relatorio/${params.id}`), 800)
+      }
+    })
+    return stop
   }, [params.id, router])
 
   const etapas = [
@@ -57,24 +53,17 @@ export default function AnaliseEmAndamento({ params }: { params: { id: string } 
           <div className="text-gray-400">Carregando...</div>
         ) : (
           <>
-            <div className="text-5xl mb-4">
-              {progresso < 100 ? '⚙️' : '✅'}
-            </div>
+            <div className="text-5xl mb-4">{progresso < 100 ? '⚙️' : '✅'}</div>
             <h2 className="text-xl font-bold text-gray-900 mb-1">
               {progresso < 100 ? 'Analisando partida...' : 'Análise concluída!'}
             </h2>
             <p className="text-gray-500 text-sm mb-6">{etapaAtual.label}</p>
 
-            {/* Progress bar */}
-            <div className="w-full bg-gray-100 rounded-full h-3 mb-6">
-              <div
-                className="bg-green-500 h-3 rounded-full transition-all duration-500"
-                style={{ width: `${progresso}%` }}
-              />
+            <div className="w-full bg-gray-100 rounded-full h-3 mb-3">
+              <div className="bg-green-500 h-3 rounded-full transition-all duration-500" style={{ width: `${progresso}%` }} />
             </div>
             <p className="text-2xl font-bold text-green-600 mb-6">{progresso}%</p>
 
-            {/* Steps */}
             <div className="text-left space-y-3">
               {etapas.map((etapa, i) => {
                 const concluida = progresso > etapa.minimo
