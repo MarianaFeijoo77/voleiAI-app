@@ -54,3 +54,4 @@ temp/
 *.mov
 *.avi
 data/raw/
+.github/
