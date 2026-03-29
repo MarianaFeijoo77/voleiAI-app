@@ -131,8 +131,8 @@ export default function Relatorio() {
                   </div>
                 </div>
                 <BarraEficiencia valor={m.eficiencia} />
-                <div className="mt-3 bg-gray-50 rounded-xl p-3">
-                  <p className="text-xs text-gray-400 font-semibold uppercase tracking-wide mb-1">💡 Sugestão de treino</p>
+                <div className="mt-3 bg-yellow-50 rounded-xl p-3">
+                  <p className="text-xs text-yellow-700 font-semibold uppercase tracking-wide mb-1">💡 Foco coletivo</p>
                   <p className="text-sm text-gray-700">{m.dica}</p>
                 </div>
               </div>
@@ -182,25 +182,45 @@ export default function Relatorio() {
               </div>
 
               {/* Actions breakdown */}
-              <div className="space-y-5">
+              <div className="space-y-6">
                 {jogador.acoes.map((acao) => (
-                  <div key={acao.tipo}>
-                    <div className="flex items-center justify-between mb-1">
+                  <div key={acao.tipo} className="border border-gray-100 rounded-xl p-4">
+                    {/* Header */}
+                    <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
-                        <span className="text-lg">{ICONES[acao.tipo]}</span>
-                        <span className="font-semibold text-gray-800 text-sm capitalize">{acao.tipo}</span>
+                        <span className="text-xl">{ICONES[acao.tipo]}</span>
+                        <span className="font-bold text-gray-900 text-sm capitalize">{acao.tipo}</span>
                       </div>
-                      <div className="flex items-center gap-3 text-xs text-gray-500">
-                        <span className="text-green-600 font-semibold">{acao.sucessos} certos</span>
-                        <span className="text-red-500 font-semibold">{acao.erros} erros</span>
+                      <div className="flex items-center gap-2 text-xs text-gray-500">
+                        <span className="text-green-600 font-semibold">{acao.sucessos}✓</span>
+                        <span className="text-red-500 font-semibold">{acao.erros}✗</span>
                         <EficienciaBadge valor={acao.eficiencia} />
                       </div>
                     </div>
                     <BarraEficiencia valor={acao.eficiencia} />
-                    <div className="mt-2 flex gap-2 items-start">
-                      <span className="text-yellow-500 text-sm mt-0.5 flex-shrink-0">💡</span>
-                      <p className="text-xs text-gray-600 leading-relaxed">{acao.dica}</p>
-                    </div>
+
+                    {/* 3-layer analysis — only show if there are errors */}
+                    {acao.erros > 0 && (
+                      <div className="mt-3 space-y-2">
+                        <div className="bg-red-50 rounded-lg p-3">
+                          <p className="text-xs font-bold text-red-600 uppercase tracking-wide mb-1">🔍 Por que está errando</p>
+                          <p className="text-xs text-gray-700 leading-relaxed">{acao.causaErros}</p>
+                        </div>
+                        <div className="bg-blue-50 rounded-lg p-3">
+                          <p className="text-xs font-bold text-blue-600 uppercase tracking-wide mb-1">⚙️ Como corrigir a execução</p>
+                          <p className="text-xs text-gray-700 leading-relaxed">{acao.correcao}</p>
+                        </div>
+                        <div className="bg-green-50 rounded-lg p-3">
+                          <p className="text-xs font-bold text-green-600 uppercase tracking-wide mb-1">🏋️ Exercício de treino</p>
+                          <p className="text-xs text-gray-700 leading-relaxed">{acao.exercicio}</p>
+                        </div>
+                      </div>
+                    )}
+                    {acao.erros === 0 && (
+                      <div className="mt-2 bg-green-50 rounded-lg p-2">
+                        <p className="text-xs text-green-700">✅ Sem erros neste fundamento nesta partida.</p>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
