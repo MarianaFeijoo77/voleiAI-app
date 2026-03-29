@@ -1,31 +1,33 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useParams } from 'next/navigation'
 import { buscarMatch, simularProcessamento, type Match } from '@/lib/store'
 
-export default function AnaliseEmAndamento({ params }: { params: { id: string } }) {
+export default function AnaliseEmAndamento() {
+  const { id } = useParams() as { id: string }
   const [match, setMatch] = useState<Match | null>(null)
   const [erro, setErro] = useState('')
   const router = useRouter()
 
   useEffect(() => {
-    const m = buscarMatch(params.id)
+    if (!id) return
+    const m = buscarMatch(id)
     if (!m) { setErro('Partida não encontrada.'); return }
     setMatch(m)
 
     if (m.status === 'concluido') {
-      router.push(`/relatorio/${params.id}`)
+      router.push(`/relatorio/${id}`)
       return
     }
 
-    const stop = simularProcessamento(params.id, (updated) => {
+    const stop = simularProcessamento(id, (updated) => {
       setMatch(updated)
       if (updated.status === 'concluido') {
-        setTimeout(() => router.push(`/relatorio/${params.id}`), 800)
+        setTimeout(() => router.push(`/relatorio/${id}`), 800)
       }
     })
     return stop
-  }, [params.id, router])
+  }, [id, router])
 
   const etapas = [
     { label: 'Vídeo recebido', minimo: 0 },

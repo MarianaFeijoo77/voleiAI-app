@@ -1,17 +1,20 @@
 'use client'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { useParams } from 'next/navigation'
 import { buscarMatch, type Match } from '@/lib/store'
 
-export default function Relatorio({ params }: { params: { id: string } }) {
+export default function Relatorio() {
+  const { id } = useParams() as { id: string }
   const [match, setMatch] = useState<Match | null>(null)
   const [erro, setErro] = useState('')
 
   useEffect(() => {
-    const m = buscarMatch(params.id)
+    if (!id) return
+    const m = buscarMatch(id)
     if (!m) { setErro('Relatório não encontrado.'); return }
     setMatch(m)
-  }, [params.id])
+  }, [id])
 
   if (erro) return (
     <main className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -34,7 +37,7 @@ export default function Relatorio({ params }: { params: { id: string } }) {
       <div className="text-center">
         <div className="text-4xl mb-4">⏳</div>
         <p className="text-gray-600 mb-4">Análise ainda em andamento.</p>
-        <Link href={`/analise/${params.id}`} className="text-green-600 font-semibold hover:underline">Ver progresso →</Link>
+        <Link href={`/analise/${id}`} className="text-green-600 font-semibold hover:underline">Ver progresso →</Link>
       </div>
     </main>
   )
