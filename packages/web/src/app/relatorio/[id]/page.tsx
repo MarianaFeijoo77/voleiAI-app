@@ -2,12 +2,37 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
-import { buscarMatch, type Match } from '@/lib/store'
+import { buscarMatch, type Match, type TipoAcao } from '@/lib/store'
+
+const ICONES: Record<TipoAcao, string> = {
+  saque: '🏐',
+  passe: '🤜',
+  levantamento: '🙌',
+  ataque: '💥',
+  bloqueio: '🛡️',
+  defesa: '🤸',
+}
+
+function EficienciaBadge({ valor }: { valor: number }) {
+  const cls = valor >= 78 ? 'text-green-600 bg-green-50' : valor >= 60 ? 'text-yellow-600 bg-yellow-50' : 'text-red-500 bg-red-50'
+  return <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${cls}`}>{valor}%</span>
+}
+
+function BarraEficiencia({ valor }: { valor: number }) {
+  const cor = valor >= 78 ? 'bg-green-500' : valor >= 60 ? 'bg-yellow-400' : 'bg-red-400'
+  return (
+    <div className="w-full bg-gray-100 rounded-full h-1.5 mt-1">
+      <div className={`h-1.5 rounded-full transition-all duration-700 ${cor}`} style={{ width: `${valor}%` }} />
+    </div>
+  )
+}
 
 export default function Relatorio() {
   const { id } = useParams() as { id: string }
   const [match, setMatch] = useState<Match | null>(null)
   const [erro, setErro] = useState('')
+  const [abaAtiva, setAbaAtiva] = useState<'equipe' | 'jogadores'>('equipe')
+  const [jogadorAtivo, setJogadorAtivo] = useState(0)
 
   useEffect(() => {
     if (!id) return
@@ -43,12 +68,11 @@ export default function Relatorio() {
   )
 
   const { relatorio } = match
-  const melhorRotacao = [...relatorio.rotacoes].sort((a, b) => b.eficiencia - a.eficiencia)[0]
-  const piorRotacao = [...relatorio.rotacoes].sort((a, b) => a.eficiencia - b.eficiencia)[0]
-  const topJogador = [...relatorio.jogadores].sort((a, b) => b.pontos - a.pontos)[0]
+  const jogador = relatorio.jogadores[jogadorAtivo]
 
   return (
     <main className="min-h-screen bg-gray-50">
+      {/* Header */}
       <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 bg-green-600 rounded-lg flex items-center justify-center text-white font-bold text-lg">V</div>
@@ -57,70 +81,135 @@ export default function Relatorio() {
         <Link href="/" className="text-sm text-gray-500 hover:text-gray-700">← Início</Link>
       </header>
 
-      <div className="max-w-3xl mx-auto px-6 py-10">
-        <div className="mb-8">
-          <div className="flex items-center gap-2 mb-2">
+      <div className="max-w-3xl mx-auto px-4 py-8">
+
+        {/* Match header */}
+        <div className="mb-6">
+          <div className="flex items-center gap-2 mb-2 flex-wrap">
             <span className="bg-green-100 text-green-700 text-xs font-semibold px-3 py-1 rounded-full">✅ Análise concluída</span>
             {match.isDemo && <span className="bg-yellow-100 text-yellow-700 text-xs font-semibold px-3 py-1 rounded-full">🎮 Demo</span>}
           </div>
           <h1 className="text-2xl font-bold text-gray-900">{match.homeTeamNome} vs {match.awayTeamNome}</h1>
-          <p className="text-gray-500 text-sm mt-1">{match.nomeArquivo} · {relatorio.totalRallies} rallies · {relatorio.totalPontos} pontos</p>
+          <p className="text-gray-500 text-sm mt-1">{match.nomeArquivo} · {relatorio.totalRallies} rallies · {relatorio.duracaoMin} min</p>
         </div>
 
-        <div className="grid grid-cols-3 gap-4 mb-8">
-          <div className="bg-white rounded-xl border border-gray-200 p-4 text-center">
-            <div className="text-2xl font-bold text-gray-900">{relatorio.totalRallies}</div>
-            <div className="text-xs text-gray-500 mt-1">Rallies</div>
-          </div>
-          <div className="bg-white rounded-xl border border-gray-200 p-4 text-center">
-            <div className="text-2xl font-bold text-green-600">{melhorRotacao.eficiencia}%</div>
-            <div className="text-xs text-gray-500 mt-1">Melhor rotação (R{melhorRotacao.rotacao})</div>
-          </div>
-          <div className="bg-white rounded-xl border border-gray-200 p-4 text-center">
-            <div className="text-2xl font-bold text-gray-900">{topJogador.pontos}</div>
-            <div className="text-xs text-gray-500 mt-1">Pontos · {topJogador.nome.split(' ')[0]}</div>
-          </div>
+        {/* Coach summary */}
+        <div className="bg-green-50 border border-green-200 rounded-2xl p-5 mb-6">
+          <p className="text-xs font-bold text-green-700 uppercase tracking-wide mb-2">📋 Resumo para o treinador</p>
+          <p className="text-gray-800 text-sm leading-relaxed">{relatorio.resumo}</p>
         </div>
 
-        <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-6">
-          <h2 className="font-bold text-gray-900 mb-1">📊 Análise por Rotação</h2>
-          <p className="text-xs text-gray-400 mb-5">
-            ⚡ Rotação forte: R{melhorRotacao.rotacao} ({melhorRotacao.eficiencia}%) &nbsp;·&nbsp;
-            ⚠️ Rotação fraca: R{piorRotacao.rotacao} ({piorRotacao.eficiencia}%)
-          </p>
-          <div className="space-y-3">
-            {relatorio.rotacoes.map((r) => (
-              <div key={r.rotacao}>
-                <div className="flex justify-between text-sm mb-1">
-                  <span className="font-medium text-gray-700">Rotação {r.rotacao}</span>
-                  <span className="text-gray-500">{r.pontos}pts · {r.erros} erros · <span className={`font-semibold ${r.eficiencia >= 75 ? 'text-green-600' : r.eficiencia >= 55 ? 'text-yellow-600' : 'text-red-500'}`}>{r.eficiencia}%</span></span>
+        {/* Tabs */}
+        <div className="flex gap-1 bg-gray-100 p-1 rounded-xl mb-6">
+          <button
+            onClick={() => setAbaAtiva('equipe')}
+            className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-colors ${abaAtiva === 'equipe' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+          >
+            🏐 Movimentos da Equipe
+          </button>
+          <button
+            onClick={() => setAbaAtiva('jogadores')}
+            className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-colors ${abaAtiva === 'jogadores' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+          >
+            👥 Análise Individual
+          </button>
+        </div>
+
+        {/* Team movements tab */}
+        {abaAtiva === 'equipe' && (
+          <div className="space-y-4">
+            {relatorio.movimentosEquipe.map((m) => (
+              <div key={m.acao} className="bg-white rounded-2xl border border-gray-200 p-5">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-2xl">{ICONES[m.acao]}</span>
+                    <span className="font-bold text-gray-900">{m.label}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-400">{m.tentativas} ações</span>
+                    <EficienciaBadge valor={m.eficiencia} />
+                  </div>
                 </div>
-                <div className="w-full bg-gray-100 rounded-full h-2">
-                  <div className={`h-2 rounded-full transition-all ${r.eficiencia >= 75 ? 'bg-green-500' : r.eficiencia >= 55 ? 'bg-yellow-400' : 'bg-red-400'}`} style={{ width: `${r.eficiencia}%` }} />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-6">
-          <h2 className="font-bold text-gray-900 mb-5">👥 Desempenho dos Jogadores</h2>
-          <div className="grid grid-cols-2 gap-3">
-            {relatorio.jogadores.map((j, i) => (
-              <div key={i} className="border border-gray-100 rounded-xl p-4">
-                <div className="font-semibold text-gray-900 text-sm">{j.nome}</div>
-                <div className="text-xs text-gray-400 mb-3">{j.posicao}</div>
-                <div className="flex justify-between text-xs">
-                  <div className="text-center"><div className="font-bold text-gray-900">{j.pontos}</div><div className="text-gray-400">pontos</div></div>
-                  <div className="text-center"><div className="font-bold text-red-500">{j.erros}</div><div className="text-gray-400">erros</div></div>
-                  <div className="text-center"><div className={`font-bold ${j.eficiencia >= 75 ? 'text-green-600' : j.eficiencia >= 55 ? 'text-yellow-600' : 'text-red-500'}`}>{j.eficiencia}%</div><div className="text-gray-400">efic.</div></div>
+                <BarraEficiencia valor={m.eficiencia} />
+                <div className="mt-3 bg-gray-50 rounded-xl p-3">
+                  <p className="text-xs text-gray-400 font-semibold uppercase tracking-wide mb-1">💡 Sugestão de treino</p>
+                  <p className="text-sm text-gray-700">{m.dica}</p>
                 </div>
               </div>
             ))}
           </div>
-        </div>
+        )}
 
-        <div className="flex gap-3">
+        {/* Individual analysis tab */}
+        {abaAtiva === 'jogadores' && (
+          <div>
+            {/* Player selector */}
+            <div className="flex gap-2 overflow-x-auto pb-3 mb-5 -mx-1 px-1">
+              {relatorio.jogadores.map((j, i) => (
+                <button
+                  key={i}
+                  onClick={() => setJogadorAtivo(i)}
+                  className={`flex-shrink-0 px-3 py-2 rounded-xl text-sm font-semibold transition-colors whitespace-nowrap
+                    ${jogadorAtivo === i ? 'bg-green-600 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:border-green-300'}`}
+                >
+                  #{j.numero} {j.nome.split(' ')[0]}
+                </button>
+              ))}
+            </div>
+
+            {/* Player card */}
+            <div className="bg-white rounded-2xl border border-gray-200 p-6">
+              <div className="flex items-start justify-between mb-4">
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">{jogador.nome}</h2>
+                  <p className="text-gray-500 text-sm">#{jogador.numero} · {jogador.posicao}</p>
+                </div>
+                <div className="text-right">
+                  <div className="flex gap-2 justify-end flex-wrap">
+                    <span className="text-xs bg-green-100 text-green-700 font-semibold px-2 py-1 rounded-full">
+                      ⚡ Forte: {ICONES[jogador.pontoForte]} {jogador.pontoForte}
+                    </span>
+                    <span className="text-xs bg-orange-100 text-orange-700 font-semibold px-2 py-1 rounded-full">
+                      🎯 Foco: {ICONES[jogador.pontoMelhoria]} {jogador.pontoMelhoria}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Highlight */}
+              <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 mb-5">
+                <p className="text-sm text-blue-800">{jogador.destaque}</p>
+              </div>
+
+              {/* Actions breakdown */}
+              <div className="space-y-5">
+                {jogador.acoes.map((acao) => (
+                  <div key={acao.tipo}>
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">{ICONES[acao.tipo]}</span>
+                        <span className="font-semibold text-gray-800 text-sm capitalize">{acao.tipo}</span>
+                      </div>
+                      <div className="flex items-center gap-3 text-xs text-gray-500">
+                        <span className="text-green-600 font-semibold">{acao.sucessos} certos</span>
+                        <span className="text-red-500 font-semibold">{acao.erros} erros</span>
+                        <EficienciaBadge valor={acao.eficiencia} />
+                      </div>
+                    </div>
+                    <BarraEficiencia valor={acao.eficiencia} />
+                    <div className="mt-2 flex gap-2 items-start">
+                      <span className="text-yellow-500 text-sm mt-0.5 flex-shrink-0">💡</span>
+                      <p className="text-xs text-gray-600 leading-relaxed">{acao.dica}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Actions */}
+        <div className="flex gap-3 mt-6">
           <Link href="/upload" className="flex-1 bg-green-600 text-white py-3 rounded-xl font-bold text-center hover:bg-green-700 transition-colors text-sm">
             + Nova Análise
           </Link>
